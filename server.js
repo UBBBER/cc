@@ -26,13 +26,24 @@ app.post('/clone', upload.single('apkFile'), (req, res) => {
         const workDir = path.join(__dirname, 'uploads', file.filename + '_work');
         const outputApk = path.join(__dirname, 'uploads', file.filename + '_cloned.apk');
 
-        console.log('🚀 جاري الفك التشفير...');
+        console.log('🚀 جاري فك التشفير...');
         execSync(`apktool d -f ${uploadedPath} -o ${workDir}`);
         
-        console.log('📝 جاري تعديل اسم الحزمة...');
+        console.log('📝 جاري تعديل اسم الحزمة والصلاحيات في كل الملفات...');
         const manifestPath = path.join(workDir, 'AndroidManifest.xml');
         let manifest = fs.readFileSync(manifestPath, 'utf8');
-        manifest = manifest.replace(/package="[^"]+"/g, `package="${pkgName}"`);
+
+        // استخراج اسم الحزمة القديم
+        let oldPkgMatch = manifest.match(/package="([^"]+)"/);
+        if (oldPkgMatch && oldPkgMatch[1]) {
+            let oldPkg = oldPkgMatch[1];
+            // استبدال الاسم القديم بالجديد في كل الملف (عشان نحل مشكلة الـ Providers)
+            manifest = manifest.split(oldPkg).join(pkgName);
+        } else {
+            // كود احتياطي لو مقدرش يستخرج الاسم
+            manifest = manifest.replace(/package="[^"]+"/g, `package="${pkgName}"`);
+        }
+
         fs.writeFileSync(manifestPath, manifest);
 
         console.log('📦 جاري إعادة التجميع...');
@@ -46,7 +57,7 @@ app.post('/clone', upload.single('apkFile'), (req, res) => {
 
     } catch (error) {
         console.error('❌ خطأ:', error.message);
-        res.status(500).send('حصل خطأ أثناء عملية النسخ، تأكد من ملف الـ APK.');
+        res.status(500).send('حصل خطأ أثناء عملية النسخ. تأكد إن ملف الـ APK سليم ومش محمي بقوة.');
     }
 });
 
@@ -54,4 +65,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 السيرفر شغال وجاهز!`);
 });
-
