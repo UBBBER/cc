@@ -3,59 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناسخ التطبيقات</title>
+    <title>ناسخ التطبيقات 📱</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
-        .container { background: #fff; padding: 30px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input, button { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        #status { text-align: center; font-weight: bold; color: #28a745; display: none; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #eef2f3; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: #fff; padding: 30px; border-radius: 15px; width: 100%; max-width: 450px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        label { font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #0056b3; }
+        
+        /* قسم التحميل والخطوات */
+        #progressSection { display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 1px solid #ddd; }
+        .step { margin: 10px 0; color: #666; font-size: 14px; display: flex; align-items: center; }
+        .step.active { color: #007bff; font-weight: bold; }
+        .step.done { color: #28a745; text-decoration: line-through; }
+        .spinner { margin-left: 10px; border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; width: 15px; height: 15px; animation: spin 1s linear infinite; display: none; }
+        .step.active .spinner { display: inline-block; }
+        
+        /* شريط الوقت المتبقي */
+        #timeContainer { text-align: center; margin-top: 15px; font-weight: bold; color: #d35400; }
+        
+        /* قسم الأخطاء والنجاح */
+        #alertBox { display: none; margin-top: 20px; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 style="text-align: center;">📱 ناسخ الـ APK</h2>
+        <h2>📱 ناسخ الـ APK</h2>
         <form id="clonerForm">
             <label>اختر ملف التطبيق (APK):</label>
             <input type="file" id="apkFile" accept=".apk" required>
+            
             <label>اسم التطبيق الجديد:</label>
-            <input type="text" id="appName" placeholder="مثال: واتساب الشغل" required>
-            <label>اسم الحزمة:</label>
-            <input type="text" id="pkgName" placeholder="مثال: com.mywork.wa" required>
+            <input type="text" id="appName" placeholder="مثال: نسختي" required>
+            
+            <label>اسم الحزمة (هام جداً):</label>
+            <input type="text" id="pkgName" placeholder="مثال: com.ahmed.app" required pattern="^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$" title="لازم يكون بالشكل ده: com.name.app">
+            
             <button type="submit" id="submitBtn">🚀 ابدأ النسخ</button>
         </form>
-        <div id="status">⏳ جاري العمل... قد يستغرق الأمر دقيقة أو دقيقتين، لا تقفل الصفحة!</div>
+
+        <div id="progressSection">
+            <div class="step" id="step1">1. رفع الملف وفك التشفير <div class="spinner"></div></div>
+            <div class="step" id="step2">2. تعديل بيانات الحزمة <div class="spinner"></div></div>
+            <div class="step" id="step3">3. إعادة تجميع الـ APK (يستغرق وقتاً) <div class="spinner"></div></div>
+            <div class="step" id="step4">4. توقيع التطبيق النهائي <div class="spinner"></div></div>
+            
+            <div id="timeContainer">⏳ الوقت المقدر المتبقي: <span id="timeLeft">90</span> ثانية</div>
+        </div>
+
+        <div id="alertBox"></div>
     </div>
 
     <script>
+        let timerInterval;
+
         document.getElementById("clonerForm").addEventListener("submit", async function(e) {
             e.preventDefault();
+            
+            // تصفير الواجهة
             document.getElementById("submitBtn").style.display = 'none';
-            document.getElementById("status").style.display = 'block';
+            document.getElementById("progressSection").style.display = 'block';
+            document.getElementById("alertBox").style.display = 'none';
+            document.getElementById("alertBox").className = '';
+            
+            let steps = [
+                document.getElementById("step1"),
+                document.getElementById("step2"),
+                document.getElementById("step3"),
+                document.getElementById("step4")
+            ];
+            steps.forEach(s => s.className = 'step'); // إرجاع الخطوات للون العادي
 
+            // تشغيل العداد (90 ثانية تقريباً لعملية النسخ)
+            let timeLeft = 90;
+            document.getElementById("timeLeft").innerText = timeLeft;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if(timeLeft > 0) {
+                    timeLeft--;
+                    document.getElementById("timeLeft").innerText = timeLeft;
+                    
+                    // تحريك الخطوات بناءً على الوقت (وهمي للتفاعل)
+                    if(timeLeft == 85) updateSteps(steps, 0); // فك التشفير
+                    if(timeLeft == 70) updateSteps(steps, 1); // تعديل الحزمة
+                    if(timeLeft == 65) updateSteps(steps, 2); // إعادة التجميع (أطول خطوة)
+                    if(timeLeft == 15) updateSteps(steps, 3); // التوقيع
+                }
+            }, 1000);
+
+            // تجهيز البيانات
             let formData = new FormData();
             formData.append("apkFile", document.getElementById("apkFile").files[0]);
             formData.append("appName", document.getElementById("appName").value);
-            formData.append("pkgName", document.getElementById("pkgName").value);
+            formData.append("pkgName", document.getElementById("pkgName").value.trim());
 
             try {
+                // إرسال الطلب للسيرفر
                 let response = await fetch('/clone', { method: 'POST', body: formData });
+                
+                clearInterval(timerInterval); // إيقاف العداد
+                document.getElementById("progressSection").style.display = 'none'; // إخفاء الخطوات
+                
                 if (response.ok) {
+                    // النجاح والتحميل
                     let blob = await response.blob();
                     let link = document.createElement('a');
                     link.href = window.URL.createObjectURL(blob);
                     link.download = document.getElementById("appName").value + '.apk';
                     link.click();
-                    document.getElementById("status").innerText = "✅ تم التحميل بنجاح!";
+                    
+                    showAlert("✅ تمت العملية بنجاح! جاري تحميل التطبيق.", "success");
                 } else {
-                    alert("حصل مشكلة أثناء النسخ!");
+                    // لو السيرفر بعت خطأ (زي مساحة كبيرة أو اسم حزمة غلط)
+                    let errorText = await response.text();
+                    showAlert("❌ فشل النسخ: " + errorText, "error");
                 }
             } catch (err) {
-                alert("خطأ في الاتصال بالسيرفر!");
+                clearInterval(timerInterval);
+                document.getElementById("progressSection").style.display = 'none';
+                showAlert("❌ حصل مشكلة في الاتصال بالسيرفر. (تأكد إن السيرفر شغال)", "error");
             }
+
+            // إرجاع الزرار
             document.getElementById("submitBtn").style.display = 'block';
         });
+
+        // دالة لتحديث شكل الخطوات
+        function updateSteps(steps, activeIndex) {
+            steps.forEach((step, index) => {
+                if (index < activeIndex) step.className = 'step done';
+                else if (index === activeIndex) step.className = 'step active';
+                else step.className = 'step';
+            });
+        }
+
+        // دالة لإظهار الرسائل
+        function showAlert(message, type) {
+            let box = document.getElementById("alertBox");
+            box.innerText = message;
+            box.className = type;
+            box.style.display = 'block';
+        }
     </script>
 </body>
 </html>
-
